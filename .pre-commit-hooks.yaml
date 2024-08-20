@@ -1,0 +1,6 @@
+- id: jss-push
+  name: Push scripts to JSS
+  description: This hook pushes modified scripts to JSS (new, modified, deleted) 
+  entry: src/jast/hooks/jast-pre-push.sh
+  language: system
+  types: [text]

@@ -1,5 +1,18 @@
 #!/bin/bash
 
+# Default values for flags
+soft_delete=false
+
+# Parse arguments
+while [[ "$#" -gt 0 ]]; do
+    case $1 in
+        --soft-delete) soft_delete=true ;;
+        # add other flags here
+        *) echo "Unknown parameter passed: $1"; exit 1 ;;
+    esac
+    shift
+done
+
 # Function to retrieve all commits since the last push, filtering out any intermediate amended commits
 get_latest_commits_since_last_push() {
     git rev-list --no-merges --reverse origin/$(git symbolic-ref --short HEAD)..HEAD
@@ -40,7 +53,11 @@ for commit in $commits; do
             # Handle deleted scripts
             if was_script_deleted "$commit" "$file"; then
                 id=$(basename "$file" .sh)  # Assuming the file name corresponds to the script ID
-                jast scripts delete --id "$id" --soft-delete --force
+                delete_command="jast scripts delete --id \"$id\" --force"
+                if [ "$soft_delete" = true ]; then
+                    delete_command+=" --soft-delete"
+                fi
+                $delete_command
             fi
         fi
     done

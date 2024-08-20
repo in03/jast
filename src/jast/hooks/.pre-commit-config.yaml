@@ -1,0 +1,5 @@
+repos:
+-   repo: https://github.com/in03/jast
+    rev: latest
+    hooks:
+    -   id: jss-push
