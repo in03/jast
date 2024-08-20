@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "JAST"
+dynamic = ["version"]
+description = 'A simple CLI tool for managing Jamf Pro scripts locally.'
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+keywords = ["jamf", "API", "scripts"]
+authors = [
+  { name = "Caleb Trevatt", email = "in03@users.noreply.github.com" },
+]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: Implementation :: CPython",
+  "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+  "requests",
+  "tomlkit",
+  "rich",
+  "typer",
+  "pydantic",
+  "pydantic-settings",
+  "yaml",
+]
+
+[project.urls]
+Documentation = "https://github.com/Caleb Trevatt/jast#readme"
+Issues = "https://github.com/Caleb Trevatt/jast/issues"
+Source = "https://github.com/Caleb Trevatt/jast"
+
+[tool.hatch.version]
+path = "src/jast/__about__.py"
+
+[tool.hatch.envs.types]
+extra-dependencies = [
+  "mypy>=1.0.0",
+]
+[tool.hatch.envs.types.scripts]
+check = "mypy --install-types --non-interactive {args:src/jast tests}"
+
+[tool.coverage.run]
+source_pkgs = ["jast", "tests"]
+branch = true
+parallel = true
+omit = [
+  "src/jast/__about__.py",
+]
+
+[tool.coverage.paths]
+jast = ["src/jast", "*/jast/src/jast"]
+tests = ["tests", "*/jast/tests"]
+
+[tool.coverage.report]
+exclude_lines = [
+  "no cov",
+  "if __name__ == .__main__.:",
+  "if TYPE_CHECKING:",
+]
+
+[project.scripts]
+jast = "jast.cli:app"
