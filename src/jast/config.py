@@ -5,8 +5,9 @@ from typing import Optional
 
 import tomlkit
 import typer
-from pydantic import Field
+from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from rich import print
 from rich.console import Console
 from rich.table import Table
 
@@ -52,7 +53,22 @@ class Settings(BaseSettings):
 
 
 # Initialize settings
-settings = Settings(**tomlkit.parse(config_filepath.read_text()))
+
+try:
+    config_data = tomlkit.parse(config_filepath.read_text())
+    settings = Settings(**config_data)
+except FileNotFoundError:
+    print(f"[red]Configuration file not found: '{config_filepath}'")
+except tomlkit.exceptions.TOMLKitError as e:
+    print(f"[red]Error parsing configuration file: {e}.[/]\n[yellow]Check: '{config_filepath}'")
+except ValidationError as e:
+    print("[red]Invalid configuration:")
+    print(e.errors())
+    print(f"\n[yellow]Check: '{config_filepath}'")
+except Exception as e:
+    print(
+        f"[red]Unexpected error reading configuration: {e}.[/]\n[yellow]Check: '{config_filepath}'"
+    )
 
 # Dynamic configuration
 settings.scripts.metadata_dir = Path(settings.scripts.path)
