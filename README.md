@@ -1,4 +1,4 @@
-# Jamf Server Tool (JaST)
+# Jamf Script Tool (JaST)
 
 [![PyPI - Version](https://img.shields.io/pypi/v/jamf-script-tool.svg)](https://pypi.org/project/jamf-script-tool)
 [![PyPI - Python Version](https://img.shields.io/pypi/pyversions/jamf-script-tool.svg)](https://pypi.org/project/jamf-script-tool)
@@ -68,7 +68,7 @@ To see all available commands, run:
                                                                                              
 ╭─ Options ─────────────────────────────────────────────────────────────────────────────────╮
 │ --install-completion          Install completion for the current shell.                   │
-│ --install-hooks               Install git hooks with pre-commitframework.                 │
+│ --install-hooks               Install git hooks with pre-commit framework.                 │
 │ --show-completion             Show completion for the current shell, to copy it or        │
 │                               customize the installation.                                 │
 │ --help                        Show this message and exit.                                 │
