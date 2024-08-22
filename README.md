@@ -46,7 +46,7 @@ Configuration is provided through a toml file located in the user's application 
 jast config edit
 ```
 
-> **NOTE:**
+> [!IMPORTANT]
 >
 > If developing locally, Jast will prioritise environment variables.
 > To prevent usage of existing Jamf environment variables and undesirable modification of a different Jamf instance, the `JAST__` prefix is used, e.g:
@@ -68,7 +68,7 @@ To see all available commands, run:
                                                                                              
 ╭─ Options ─────────────────────────────────────────────────────────────────────────────────╮
 │ --install-completion          Install completion for the current shell.                   │
-│ --install-hooks               Install git hooks with pre-commit framework.                 │
+│ --install-hooks               Install git hooks with pre-commit framework.                │
 │ --show-completion             Show completion for the current shell, to copy it or        │
 │                               customize the installation.                                 │
 │ --help                        Show this message and exit.                                 │
@@ -79,7 +79,8 @@ To see all available commands, run:
 ╰───────────────────────────────────────────────────────────────────────────────────────────╯
 
 ```
-> **Note**: You can also run `--help` on individual commands.
+> [!TIP]
+> You can also run `--help` on individual commands.
 
 ### Workflows
 
