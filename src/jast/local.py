@@ -53,7 +53,8 @@ def get_script_by_id(script_id: int) -> LocalJamfScript:
         FileNotFoundError: If no script with the given ID is found.
         ValueError: If multiple scripts with the same ID are found.
     """
-    local_script = [x for x in get_all_scripts() if int(x.id) == int(script_id)]
+    # New scripts will not have an ID, so we can ignore them.
+    local_script = [x for x in get_all_scripts() if x.id is not None and int(x.id) == script_id]
     
     if not local_script:
         raise FileNotFoundError(f"Script with ID {script_id} not found.")
