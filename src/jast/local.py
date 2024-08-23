@@ -1,4 +1,3 @@
-
 from typing import Any, Dict, List, Tuple
 
 import tomlkit
@@ -68,8 +67,13 @@ def get_script_by_id(script_id: int) -> LocalJamfScript:
 def prompt_name_mismatch(local_script: LocalJamfScript, remote_script: RemoteJamfScript) -> LocalJamfScript:
     """
     If the remote name differs from the local name, prompt the user for which name to use.
-    
-    Return the updated `local_script` object. 
+
+    Args:
+        local_script (LocalJamfScript): The local script object.
+        remote_script (RemoteJamfScript): The remote script object.
+
+    Returns:
+        LocalJamfScript: The updated local_script object.
     """
     
     # Change nothing, all good.
@@ -96,7 +100,11 @@ def prompt_name_mismatch(local_script: LocalJamfScript, remote_script: RemoteJam
 
 def push_from_metadata(jamf: JamfClient, local_script: LocalJamfScript):
     """
-    Find the script that matches the metadata file and push to JSS
+    Find the script that matches the metadata file and push to JSS.
+
+    Args:
+        jamf (JamfClient): The Jamf client object.
+        local_script (LocalJamfScript): The local script object to push.
     """
     
     # Push if it exists
@@ -112,6 +120,20 @@ def diff_lists(
     list2: List[Dict[str, Any]],
     key_fields: Tuple[str, str] = ("id", "name")
 ) -> Dict[str, List[Dict[str, Any]]]:
+    """
+    Compare two lists of dictionaries and return the differences.
+
+    Args:
+        list1 (List[Dict[str, Any]]): The first list of dictionaries to compare.
+        list2 (List[Dict[str, Any]]): The second list of dictionaries to compare.
+        key_fields (Tuple[str, str], optional): The fields to use as keys for comparison. Defaults to ("id", "name").
+
+    Returns:
+        Dict[str, List[Dict[str, Any]]]: A dictionary containing the differences:
+            - "matched_diffs": Items that match but differ in other fields.
+            - "in_list1_only": Items only in list1.
+            - "in_list2_only": Items only in list2.
+    """
     
     # Create lookup dictionaries based on "id" and "name"
     lookup1 = {d[key]: d for d in list1 for key in key_fields if key in d}
