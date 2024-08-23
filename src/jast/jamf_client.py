@@ -216,3 +216,48 @@ class JamfClient:
                 raise requests.exceptions.HTTPError(error_message) from e
 
         return response.json()
+
+    def delete_script(self, script_id: int) -> Dict[str, Any]:
+        """
+        Delete a script from the Jamf Pro server by its ID.
+
+        Args:
+            script_id (int): The ID of the script to delete.
+
+        Returns:
+            Dict[str, Any]: The response from the Jamf Pro server.
+
+        Raises:
+            requests.exceptions.HTTPError: If the API request fails.
+        """
+        
+        response = requests.delete(
+            f"{self.url}/uapi/v1/scripts/{script_id}",
+            headers={"Authorization": f"Bearer {self.token}"},
+            verify=settings.ssl.verify,
+        )
+        response.raise_for_status()
+        return response.json()
+    
+    def rename_script(self, script_id: int, new_name: str) -> Dict[str, Any]:
+        """
+        Rename a script in the Jamf Pro server by its ID.
+
+        Args:
+            script_id (int): The ID of the script to rename.
+            new_name (str): The new name for the script.
+
+        Returns:
+            Dict[str, Any]: The response from the Jamf Pro server containing the updated script information.
+
+        Raises:
+            requests.exceptions.HTTPError: If the API request fails.
+        """
+        response = requests.put(
+            f"{self.url}/uapi/v1/scripts/{script_id}",
+            headers={"Authorization": f"Bearer {self.token}"},
+            json={"name": new_name},
+            verify=settings.ssl.verify,
+        )
+        response.raise_for_status()
+        return response.json()
