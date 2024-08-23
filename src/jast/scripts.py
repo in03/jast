@@ -107,108 +107,202 @@ def pull(
 # region Push
 @scripts_app.command()
 def push(
-    dir: Path = typer.Option(
+    dir: Path = typer.Argument(
         settings.scripts.path,
-        help="Directory of scripts to push to JSS. Auto match metadata files.",
+        help="Directory of target scripts to push to JSS. Auto match metadata files.",
     ),
-    file: str = typer.Option(
+    name: str = typer.Option(
         None,
-        help="List of filepaths to push to JSS. Relative. Comma separated. Auto match metadata files.",
+        help="Whitelist. Only push scripts with filenames matching this comma separated list.",
     ),
     id: str = typer.Option(
         None,
-        help="List of files to push to JSS. Use IDs from TOML files. Comma separated. Auto match script by name.",
+        help="Whitelist. Only push scripts with IDs matching this comma separated list.",
     ),
 ):
-    """Create or update Jamf scripts from local scripts and metadata files."""
+    """
+    Create or update remote Jamf scripts from local scripts and metadata files.
 
-    # Handle parameters as mutually exclusive
-    if sum(bool(arg) for arg in [file, id, (dir != settings.scripts.path)]) > 1:
-        raise typer.BadParameter(
-            "Please provide only one of --scripts-path, --file, or --id."
-        )
+    By default, all scripts in the configured 'scripts_path' are pushed. Override this by specifying a directory.
+
+    - Single filename    --name   "provisioning_script"
+
+    - Single ID          --id     "160"
+
+    - Filename list      --name   "script1.sh, script with spaces.sh, script_no_ext"
+
+    - ID list            --id     "160, 109, 21"
+
+    You may also specify dir and a list of both names and IDs within that directory.
+    """
+
+    #! Warning! Overrides the script and metadata paths!
+    # Why? Dependency injection nightmare to add params to nested functions across modules.
+    # To prevent side-effects, ensure the program ends soon after the push or reset it.
+
+    # Override script path
+    settings.scripts.path = dir
+    if not settings.scripts.metadata_dir.exists():
+        print(f"[yellow]Metadata directory '{settings.scripts.metadata_dir}' does not exist.")
+        return
+
+    # Re-derive metadata path
+    if not settings.scripts.metadata_in_subfolder:
+        settings.scripts.metadata_dir = dir
+    else:
+        settings.scripts.metadata_dir = dir / "metadata"
+    if not settings.scripts.metadata_dir.exists():
+        print(f"[yellow]Metadata directory '{settings.scripts.metadata_dir}' does not exist.")
+        return
+    
+
+    ###############################################################
 
     jamf = JamfClient(settings.jamf.url, settings.jamf.user, settings.jamf.password)
 
-    if file:
-        push_from_file_list(jamf, file)
+    # Push all
+    if not name and not id:
+        push_all(jamf)
+        print("\n[green]--- Push complete ---\n")
         return
+
+    # Whitelisted
+    if name:
+        push_from_file_list(jamf, name)
 
     if id:
         push_from_id_list(jamf, id)
-        return
 
-    push_from_directory(jamf, dir)
+    print("\n[green]--- Push complete ---\n")
+    return
 
 
-def push_from_file_list(jamf: JamfClient, file: str):
-    script_files = [f.strip() for f in file.split(",")]
-    for script_file in script_files:
-        script_name = Path(script_file).stem
-        metadata_file = Path(settings.scripts.metadata_dir) / f"{script_name}.toml"
+def push_from_file_list(jamf: JamfClient, file_list: str):
+    """
+    Push scripts by filename from the local directory to Jamf Pro.
 
-        if not Path(script_file).resolve().exists():
-            print(f"[yellow]Script file {script_file} does not exist.")
+    Args:
+        jamf (JamfClient): An instance of the JamfClient used to interact with Jamf Pro.
+        file_list (str): A comma-separated list of filenames to push.
+
+    Returns:
+        None
+
+    Note:
+        - Skips files without corresponding metadata.
+        - Prints status messages for each script processed.
+    """
+    filenames = [f.strip() for f in file_list.split(",")]
+    print(f"[magenta]\nPushing {len(filenames)} scripts by filename...\n")
+    
+    for filename in filenames:
+        print(f"[cyan]'{filename}':", end=" ")
+
+        filepath = settings.scripts.path / filename
+        metadata_path = settings.scripts.metadata_dir / f"{Path(filename).stem}.toml"
+
+        if not filepath.resolve().exists():
+            print(f"   [yellow]Script at path {filepath} not found. Skipping...")
             continue
 
-        if not metadata_file.resolve().exists():
-            print(f"[yellow]Metadata file {metadata_file} does not exist.")
+        if not metadata_path.resolve().exists():
+            print(f"[yellow]Metadata file {metadata_path} does not exist.")
             continue
 
-        local.push_from_metadata(jamf, metadata_file, Path(script_file).parent)
+        local_script = local.get_script_by_path(filepath)
+        
+        # Hint pushing new
+        print("✨") if local_script.id is None else print(f"'{local_script.id}'")
+        
+        # Push it
+        remote_script = jamf.create_or_update_script(local_script)
+        print("        [green]Pushed ✅")
+        
+        # Update ID in metadata file
+        if not local_script.id:
+            new_local = remote_script.convert_to_local()
+            new_local.save_metadata_file()
+            print(f"        [green]ID {new_local.id}\n")
 
 
-def push_from_id_list(jamf: JamfClient, ids: str):
+def push_from_id_list(jamf: JamfClient, id_list: str):
     """
-    Push scripts by ID from TOML files
+    Push scripts by ID from TOML files to Jamf Pro.
 
-    Supports multiple IDs, comma separated.
+    Args:
+        jamf (JamfClient): An instance of the JamfClient used to interact with Jamf Pro.
+        id_list (str): A comma-separated list of script IDs to push.
 
-    Since an ID is provided, scripts are presumed to already be registered in JSS.
-    If the name of the script has changed locally, you will be prompted to update the script name.
+    Returns:
+        None
 
+    Note:
+        - Supports multiple IDs, comma separated.
+        - Scripts are presumed to already be registered in JSS.
+        - If the name of the script has changed locally, you will be prompted to update the script name.
+        - Prints status messages for each script processed.
     """
-    script_ids = [f.strip() for f in ids.split(",")]
-    print(f"[magenta]Pushing {len(script_ids)} scripts...\n")
+    ids = [f.strip() for f in id_list.split(",")]
+    print(f"[magenta]\nPushing {len(ids)} scripts by ID...\n")
 
-    for script_id in script_ids:
-        print(f"[cyan]'{script_id}':", end=" ")
+    for id in ids:
+        print(f"[cyan]'{id}':", end=" ")
 
-        remote_script = jamf.get_script_by_id(script_id)
-        local_script = local.get_script_by_id(script_id)
+        id = int(id)
+
+        remote_script = jamf.get_script_by_id(id)
+        local_script = local.get_script_by_id(id)
 
         print(f"'{remote_script.name}'")
 
-        # No script matching ID, check next in lsit
         if not local_script:
-            print(f"   [yellow]Script with ID {script_id} not found. Skipping...")
+            print(f"   [yellow]Script with ID {id} not found. Skipping...")
             continue
 
-        # IDs match, script names don't... How handle??
         local_script = local.prompt_name_mismatch(local_script, remote_script)
 
-        # Add category ID
         local_script.categoryId = jamf.get_category_id_by_name(
             local_script.categoryName
         )
 
-        local.push_from_metadata(jamf, local_script)
+        jamf.create_or_update_script(local_script)
         print("        [green]Pushed ✅\n")
 
-    print("\n[green]--- Push complete ---\n")
+    return
 
 
-def push_from_directory(jamf: JamfClient, scripts_path: Path):
-    if not scripts_path.exists():
-        raise typer.BadParameter(
-            f"{scripts_path} does not exist. Please provide a valid directory."
-        )
+def push_all(jamf: JamfClient):
+    """
+    Push all scripts from the local directory to Jamf Pro.
 
-    for script_file in scripts_path.glob("*.sh"):
-        script_name = script_file.stem
-        metadata_file = Path(settings.scripts.metadata_dir) / f"{script_name}.toml"
-        if metadata_file.exists():
-            local.push_from_metadata(jamf, metadata_file, scripts_path)
+    Args:
+        jamf (JamfClient): An instance of the JamfClient used to interact with Jamf Pro.
+
+    Returns:
+        None
+
+    Note:
+        - Iterates through all files in the scripts directory specified in the settings.
+        - Attempts to create or update each script in Jamf Pro.
+        - Skips files without corresponding metadata.
+        - Assumes that script files exist if metadata is present.
+        - Prints status messages for each script processed.
+    """
+    for file in settings.scripts.path.glob("*"):
+        print(f"[cyan]'{file}':", end=" ")
+
+        local_script = local.get_script_by_path(file)
+
+        assert local_script.script_file.exists()
+
+        if not local_script.metadata_file.exists():
+            print(f"   [yellow]Metadata file not found for '{file.stem}'. Skipping...")
+            continue
+
+        jamf.create_or_update_script(local_script)
+        print("        [green]Pushed ✅\n")
+
+        return
 
 
 # endregion
@@ -285,11 +379,11 @@ def delete(
 ):
     """
     Delete a script from Jamf.
-    
+
     This does not deal with the deletion of local scripts, only remote scripts in JSS.
-    
+
     Use with caution! Deletions are hard by default. Pass --soft to soft delete.
-    
+
     This command is also used internally by the pre-push hook.
     """
 
@@ -305,7 +399,7 @@ def delete(
         print(f"[yellow]Soft deleting script: ID {id}: '{soft_delete_name}'")
         jamf.rename_script(script_id=id, new_name=soft_delete_name)
         return
-    
+
     print(f"[yellow]Deleting script: ID {id}: '{soft_delete_name}'")
     jamf.delete_script(script_id=id)
 

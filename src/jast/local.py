@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import tomlkit
@@ -61,6 +62,26 @@ def get_script_by_id(script_id: int) -> LocalJamfScript:
     
     if len(local_script) > 1:
         raise ValueError(f"Multiple scripts found with ID {script_id}!\n")
+    
+    return local_script[0]
+
+
+def get_script_by_path(script_path: Path) -> LocalJamfScript:
+    """
+    Get a script by path from a local directory of scripts.
+
+    Args:
+        script_path (Path): The path of the script file to retrieve.
+
+    Returns:
+        LocalJamfScript: The LocalJamfScript object with the matching script file path.
+
+    Raises:
+        FileNotFoundError: If no script with the given path is found.
+    """
+    local_script = [x for x in get_all_scripts() if x.script_file == script_path]
+    if not local_script:
+        raise FileNotFoundError(f"Script with path {script_path} not found.")
     
     return local_script[0]
 
