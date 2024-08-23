@@ -9,6 +9,7 @@ from pydantic import Field, ValidationError
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from rich import print
 from rich.console import Console
+from rich.prompt import Confirm
 from rich.table import Table
 
 # Set config path
@@ -127,9 +128,9 @@ def reset():
     """
     Set the configuration file to default values.
     """
-    if typer.confirm(
+    if Confirm.ask(
         "Are you sure you want to reset the configuration file to default values?",
-        abort=True,
+        default=False,
     ):
         if application_dir.exists():
             for file in application_dir.iterdir():

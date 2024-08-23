@@ -87,7 +87,9 @@ def pull(
         script_content = remote_script.scriptContents
         script_path = Path(path) / f"{remote_script.name}.sh"
         if script_path.exists() and not force:
-            overwrite = typer.confirm("  - Script file already exists. Overwrite?")
+            overwrite = Confirm.ask(
+                "[yellow]  - Script file already exists. Overwrite?", default=True
+            )
             if not overwrite:
                 print("    [magenta]Skipped script")
             else:
@@ -390,7 +392,9 @@ def delete(
     jamf = JamfClient(settings.jamf.url, settings.jamf.user, settings.jamf.password)
 
     if not force:
-        if not typer.confirm("Are you sure you want to delete this script?"):
+        if not Confirm.ask(
+            "[yellow]Are you sure you want to delete this script?", default=True
+        ):
             print("Aborting...")
             return
 
