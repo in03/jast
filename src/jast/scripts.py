@@ -266,3 +266,48 @@ def verify():
 
 
 # endregion
+
+
+# region Delete
+@scripts_app.command()
+def delete(
+    id: bool = typer.Argument(
+        help="The ID of the script to delete.",
+    ),
+    force: bool = typer.Option(
+        False,
+        help="Don't prompt for confirmation.",
+    ),
+    soft: bool = typer.Option(
+        False,
+        help="Soft delete. Append '(DELETE ME)' to script name.",
+    ),
+):
+    """
+    Delete a script from Jamf.
+    
+    This does not deal with the deletion of local scripts, only remote scripts in JSS.
+    
+    Use with caution! Deletions are hard by default. Pass --soft to soft delete.
+    
+    This command is also used internally by the pre-push hook.
+    """
+
+    jamf = JamfClient(settings.jamf.url, settings.jamf.user, settings.jamf.password)
+
+    if not force:
+        if not typer.confirm("Are you sure you want to delete this script?"):
+            print("Aborting...")
+            return
+
+    if soft:
+        soft_delete_name = jamf.get_script_by_id(id).name + " (DELETE ME)"
+        print(f"[yellow]Soft deleting script: ID {id}: '{soft_delete_name}'")
+        jamf.rename_script(script_id=id, new_name=soft_delete_name)
+        return
+    
+    print(f"[yellow]Deleting script: ID {id}: '{soft_delete_name}'")
+    jamf.delete_script(script_id=id)
+
+
+# endregion
