@@ -367,7 +367,7 @@ def verify():
 # region Delete
 @scripts_app.command()
 def delete(
-    id: bool = typer.Argument(
+    id: int = typer.Argument(
         help="The ID of the script to delete.",
     ),
     force: bool = typer.Option(
