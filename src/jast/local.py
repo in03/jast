@@ -10,6 +10,61 @@ from jast.jamf_client import JamfClient
 from jast.schema import LocalJamfScript, RemoteJamfScript
 
 
+def get_all_scripts() -> List[LocalJamfScript]:
+    """
+    Get all local scripts from the metadata directory.
+
+    Returns:
+        List[LocalJamfScript]: A list of LocalJamfScript objects representing all local scripts.
+
+    Raises:
+        ValueError: If no scripts are found in the metadata directory.
+    """
+    local_scripts = []
+    for metadata_file in settings.scripts.metadata_dir.glob("*.toml"):
+        
+        with open(metadata_file, "r") as f:
+            metadata = tomlkit.load(f)
+        
+        # Inject name from filename
+        metadata.update(dict(
+            name = metadata_file.stem
+        ))
+        
+        local_script = LocalJamfScript(**metadata)
+        local_scripts.append(local_script)
+        
+    if not local_scripts:
+        raise ValueError("No scripts found!")
+        
+    return local_scripts
+
+
+def get_script_by_id(script_id: int) -> LocalJamfScript:
+    """
+    Get a script by ID from a local directory of scripts.
+
+    Args:
+        script_id (int): The ID of the script to retrieve.
+
+    Returns:
+        LocalJamfScript: The LocalJamfScript object with the matching ID.
+
+    Raises:
+        FileNotFoundError: If no script with the given ID is found.
+        ValueError: If multiple scripts with the same ID are found.
+    """
+    local_script = [x for x in get_all_scripts() if int(x.id) == int(script_id)]
+    
+    if not local_script:
+        raise FileNotFoundError(f"Script with ID {script_id} not found.")
+    
+    if len(local_script) > 1:
+        raise ValueError(f"Multiple scripts found with ID {script_id}!\n")
+    
+    return local_script[0]
+
+
 def prompt_name_mismatch(local_script: LocalJamfScript, remote_script: RemoteJamfScript) -> LocalJamfScript:
     """
     If the remote name differs from the local name, prompt the user for which name to use.
@@ -50,45 +105,6 @@ def push_from_metadata(jamf: JamfClient, local_script: LocalJamfScript):
         return
     
     jamf.create_or_update_script(local_script)
-
-
-def get_all_scripts() -> List[LocalJamfScript]:
-    """
-    Get all local scripts from the metadata directory.
-    """
-    local_scripts = []
-    for metadata_file in settings.scripts.metadata_dir.glob("*.toml"):
-        
-        with open(metadata_file, "r") as f:
-            metadata = tomlkit.load(f)
-        
-        # Inject name from filename
-        metadata.update(dict(
-            name = metadata_file.stem
-        ))
-        
-        local_script = LocalJamfScript(**metadata)
-        local_scripts.append(local_script)
-        
-    if not local_scripts:
-        raise ValueError("No scripts found!")
-        
-    return local_scripts
-
-
-def get_script_by_id(script_id: int) -> LocalJamfScript:
-    """Get a script by ID from a local directory of scripts"""
-        
-    local_script = [x for x in get_all_scripts() if int(x.id) == int(script_id)]
-    
-    if not local_script:
-        raise FileNotFoundError(f"Script with ID {script_id} not found.")
-    
-    if len(local_script) > 1:
-        raise ValueError(f"Multiple scripts found with ID {script_id}!\n")
-    
-    return local_script[0]
-
 
 
 def diff_lists(
