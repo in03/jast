@@ -159,8 +159,10 @@ class JamfClient:
         )
         response.raise_for_status()
         return RemoteJamfScript(**response.json())
-    
-    def create_or_update_script(self, local_script: LocalJamfScript) -> RemoteJamfScript:
+
+    def create_or_update_script(
+        self, local_script: LocalJamfScript
+    ) -> RemoteJamfScript:
         """
         Create or update an existing Jamf Pro script.
 
@@ -211,7 +213,7 @@ class JamfClient:
             raise requests.exceptions.HTTPError(error_message) from e
 
         # Fetch the newly registered or updated script
-        script_id = response.json().get('id')
+        script_id = response.json().get("id")
         return self.get_script_by_id(script_id)
 
     def delete_script(self, script_id: int) -> Dict[str, Any]:
@@ -227,7 +229,7 @@ class JamfClient:
         Raises:
             requests.exceptions.HTTPError: If the API request fails.
         """
-        
+
         response = requests.delete(
             f"{self.url}/uapi/v1/scripts/{script_id}",
             headers={"Authorization": f"Bearer {self.token}"},
@@ -235,7 +237,7 @@ class JamfClient:
         )
         response.raise_for_status()
         return response.json()
-    
+
     def rename_script(self, script_id: int, new_name: str) -> Dict[str, Any]:
         """
         Rename a script in the Jamf Pro server by its ID.

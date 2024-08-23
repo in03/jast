@@ -145,7 +145,9 @@ def push(
     # Override script path
     settings.scripts.path = dir
     if not settings.scripts.metadata_dir.exists():
-        print(f"[yellow]Metadata directory '{settings.scripts.metadata_dir}' does not exist.")
+        print(
+            f"[yellow]Metadata directory '{settings.scripts.metadata_dir}' does not exist."
+        )
         return
 
     # Re-derive metadata path
@@ -154,9 +156,10 @@ def push(
     else:
         settings.scripts.metadata_dir = dir / "metadata"
     if not settings.scripts.metadata_dir.exists():
-        print(f"[yellow]Metadata directory '{settings.scripts.metadata_dir}' does not exist.")
+        print(
+            f"[yellow]Metadata directory '{settings.scripts.metadata_dir}' does not exist."
+        )
         return
-    
 
     ###############################################################
 
@@ -196,7 +199,7 @@ def push_from_file_list(jamf: JamfClient, file_list: str):
     """
     filenames = [f.strip() for f in file_list.split(",")]
     print(f"[magenta]\nPushing {len(filenames)} scripts by filename...\n")
-    
+
     for filename in filenames:
         print(f"[cyan]'{filename}':", end=" ")
 
@@ -212,14 +215,14 @@ def push_from_file_list(jamf: JamfClient, file_list: str):
             continue
 
         local_script = local.get_script_by_path(filepath)
-        
+
         # Hint pushing new
         print("✨") if local_script.id is None else print(f"'{local_script.id}'")
-        
+
         # Push it
         remote_script = jamf.create_or_update_script(local_script)
         print("        [green]Pushed ✅")
-        
+
         # Update ID in metadata file
         if not local_script.id:
             new_local = remote_script.convert_to_local()

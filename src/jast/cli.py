@@ -1,4 +1,3 @@
-
 import typer
 
 from jast.config import config_app

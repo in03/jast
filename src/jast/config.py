@@ -61,7 +61,9 @@ try:
 except FileNotFoundError:
     print(f"[red]Configuration file not found: '{config_filepath}'")
 except tomlkit.exceptions.TOMLKitError as e:
-    print(f"[red]Error parsing configuration file: {e}.[/]\n[yellow]Check: '{config_filepath}'")
+    print(
+        f"[red]Error parsing configuration file: {e}.[/]\n[yellow]Check: '{config_filepath}'"
+    )
 except ValidationError as e:
     print("[red]Invalid configuration:")
     print(e.errors())
@@ -84,7 +86,7 @@ if settings.scripts.metadata_in_subfolder:
 @config_app.command()
 def show():
     """
-    Shows JAST's current configuration in a table.
+    Shows Jast's current configuration in a table.
     """
     table = Table(title="Current Configuration")
     table.add_column("Name", style="cyan", no_wrap=True)
