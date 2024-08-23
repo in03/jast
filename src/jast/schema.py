@@ -32,8 +32,8 @@ class JamfScript(BaseModel):
     - `RemoteJamfScript` is used to represent a script that exists on the Jamf server.
     """
 
-    id: Optional[int] = Field(
-        None, description="The unique identifier for the Jamf script"
+    id: Optional[str] = Field(
+        "", description="The unique identifier for the Jamf script"
     )
     name: Optional[str] = Field("", description="The name of the Jamf script")
     info: Optional[str] = Field(
@@ -73,8 +73,8 @@ class JamfScript(BaseModel):
         "", description="Operating system requirements for the script"
     )
     scriptContents: Optional[str] = Field("", description="The contents of the script")
-    categoryId: Optional[int] = Field(
-        -1, description="The ID of the category the script belongs to"
+    categoryId: Optional[str] = Field(
+        "-1", description="The ID of the category the script belongs to"
     )
     categoryName: Optional[str] = Field(
         "NONE", description="The name of the category the script belongs to"
