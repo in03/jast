@@ -6,7 +6,6 @@ from rich import print
 from rich.prompt import Confirm
 
 from jast.config import settings
-from jast.jamf_client import JamfClient
 from jast.schema import LocalJamfScript, RemoteJamfScript
 
 
@@ -118,24 +117,6 @@ def prompt_name_mismatch(local_script: LocalJamfScript, remote_script: RemoteJam
         local_script.metadata_file.rename(settings.scripts.metadata_dir / f"{remote_script.name}.toml")
         local_script.script_file.rename(settings.scripts.path / f"{remote_script.name}.sh")
         return local_script
-
-
-def push_from_metadata(jamf: JamfClient, local_script: LocalJamfScript):
-    """
-    Find the script that matches the metadata file and push to JSS.
-
-    Args:
-        jamf (JamfClient): The Jamf client object.
-        local_script (LocalJamfScript): The local script object to push.
-    """
-    
-    # Push if it exists
-    if not (local_script.script_file.exists()):
-        print(f"[yellow]Script file {local_script.script_file} not found for {local_script.metadata_file}")
-        return
-    
-    jamf.create_or_update_script(local_script)
-
 
 def diff_lists(
     list1: List[Dict[str, Any]],
