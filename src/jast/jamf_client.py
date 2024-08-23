@@ -159,8 +159,8 @@ class JamfClient:
         )
         response.raise_for_status()
         return RemoteJamfScript(**response.json())
-
-    def create_or_update_script(self, local_script: LocalJamfScript) -> Dict[str, Any]:
+    
+    def create_or_update_script(self, local_script: LocalJamfScript) -> RemoteJamfScript:
         """
         Create or update an existing Jamf Pro script.
 
@@ -170,7 +170,7 @@ class JamfClient:
             local_script (LocalJamfScript): The local script to create or update.
 
         Returns:
-            Dict[str, Any]: The response from the Jamf Pro server.
+            RemoteJamfScript: The newly registered or updated script.
 
         Raises:
             requests.exceptions.HTTPError: If the API request fails.
@@ -179,11 +179,6 @@ class JamfClient:
         # Payload: Add metadata
         local_script.load_script_contents()
         payload_data = local_script.payload_data
-
-        #! DEBUG: REMOVE LATER
-        # with open(Path("./jamf_test.json"), "w") as meta_file:
-        #     meta_file.write(json.dumps(payload_data, indent=4))
-        # exit()
 
         # If ID, assume existing script update
         id = local_script.id if local_script.id else ""
@@ -200,22 +195,24 @@ class JamfClient:
         )
 
         if not id:
-            response = requests.put(**request)
+            response = requests.post(**request)
         else:
             response = requests.put(**request)
 
+        try:
+            response.raise_for_status()
+        except requests.exceptions.HTTPError as e:
+            error_message = f"HTTP error occurred: {e}"
             try:
-                response.raise_for_status()
-            except requests.exceptions.HTTPError as e:
-                error_message = f"HTTP error occurred: {e}"
-                try:
-                    error_details = response.json()
-                    error_message += f"\nResponse details: {error_details}"
-                except ValueError:
-                    error_message += f"\nResponse text: {response.text}"
-                raise requests.exceptions.HTTPError(error_message) from e
+                error_details = response.json()
+                error_message += f"\nResponse details: {error_details}"
+            except ValueError:
+                error_message += f"\nResponse text: {response.text}"
+            raise requests.exceptions.HTTPError(error_message) from e
 
-        return response.json()
+        # Fetch the newly registered or updated script
+        script_id = response.json().get('id')
+        return self.get_script_by_id(script_id)
 
     def delete_script(self, script_id: int) -> Dict[str, Any]:
         """
