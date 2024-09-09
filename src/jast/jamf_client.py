@@ -236,7 +236,7 @@ class JamfClient:
             verify=settings.ssl.verify,
         )
         response.raise_for_status()
-        return response.json()
+        return response
 
     def rename_script(self, script_id: int, new_name: str) -> Dict[str, Any]:
         """
