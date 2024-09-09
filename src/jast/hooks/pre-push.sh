@@ -42,23 +42,20 @@ for commit in $commits; do
     changed_files=$(git diff-tree --no-commit-id --name-only -r "$commit")
 
     for file in $changed_files; do
-        # Check if the file is a script (assuming script files have a .sh extension)
-        if [[ "$file" == *.sh ]]; then
-            # Handle added/changed scripts
-            if was_script_changed "$commit" "$file"; then
-                id=$(jast scripts push --file "$file")
-                jast history new --id "$id" --commit "$commit"
-            fi
+        # Handle added/changed scripts
+        if was_script_changed "$commit" "$file"; then
+            id=$(jast scripts push --file "$file")
+            jast history new --id "$id" --commit "$commit"
+        fi
 
-            # Handle deleted scripts
-            if was_script_deleted "$commit" "$file"; then
-                id=$(basename "$file" .sh)  # Assuming the file name corresponds to the script ID
-                delete_command="jast scripts delete --id \"$id\" --force"
-                if [ "$soft_delete" = true ]; then
-                    delete_command+=" --soft-delete"
-                fi
-                $delete_command
+        # Handle deleted scripts
+        if was_script_deleted "$commit" "$file"; then
+            id=$(basename "$file")  # Assuming the file name corresponds to the script ID
+            delete_command="jast scripts delete --id \"$id\" --force"
+            if [ "$soft_delete" = true ]; then
+                delete_command+=" --soft-delete"
             fi
+            $delete_command
         fi
     done
 

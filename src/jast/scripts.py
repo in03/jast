@@ -85,7 +85,7 @@ def pull(
 
         # Handle script file
         script_content = remote_script.scriptContents
-        script_path = Path(path) / f"{remote_script.name}.sh"
+        script_path = Path(path) / remote_script.name
         if script_path.exists() and not force:
             overwrite = Confirm.ask(
                 "[yellow]  - Script file already exists. Overwrite?", default=True
@@ -204,7 +204,7 @@ def push_from_file_list(jamf: JamfClient, file_list: str):
         print(f"[cyan]'{filename}':", end=" ")
 
         filepath = settings.scripts.path / filename
-        metadata_path = settings.scripts.metadata_dir / f"{Path(filename).stem}.toml"
+        metadata_path = settings.scripts.metadata_dir / f"{Path(filename)}.toml"
 
         if not filepath.resolve().exists():
             print(f"   [yellow]Script at path {filepath} not found. Skipping...")
@@ -301,7 +301,7 @@ def push_all(jamf: JamfClient):
         assert local_script.script_file.exists()
 
         if not local_script.metadata_file.exists():
-            print(f"   [yellow]Metadata file not found for '{file.stem}'. Skipping...")
+            print(f"   [yellow]Metadata file not found for '{file}'. Skipping...")
             continue
 
         jamf.create_or_update_script(local_script)
@@ -396,19 +396,29 @@ def delete(
 
     if not force:
         if not Confirm.ask(
-            "[yellow]Are you sure you want to delete this script?", default=True
+            "[yellow]Are you sure you want to delete this script?", default=False
         ):
             print("Aborting...")
             return
 
+    remote_script = jamf.get_script_by_id(id)
+    remote_script_name = remote_script.name
+
     if soft:
-        soft_delete_name = jamf.get_script_by_id(id).name + " (DELETE ME)"
-        print(f"[yellow]Soft deleting script: ID {id}: '{soft_delete_name}'")
-        jamf.rename_script(script_id=id, new_name=soft_delete_name)
+        delete_name = remote_script_name + " (DELETE ME)"
+        print(f"[yellow]Soft deleting script: ID {id}: '{delete_name}'")
+        jamf.rename_script(script_id=id, new_name=delete_name)
         return
 
-    print(f"[yellow]Deleting script: ID {id}: '{soft_delete_name}'")
+    print(f"[yellow]Deleting script: ID {id}: '{remote_script_name}'")
     jamf.delete_script(script_id=id)
+    
+    # Remove ID attribute from corresponding TOML file
+    local_script = remote_script.convert_to_local()
+    local_script.id = None
+    local_script.save_metadata_file()
+    
+    print("[green]Deleted ✅")
 
 
 # endregion

@@ -120,7 +120,7 @@ def prompt_name_mismatch(
             settings.scripts.metadata_dir / f"{remote_script.name}.toml"
         )
         local_script.script_file.rename(
-            settings.scripts.path / f"{remote_script.name}.sh"
+            settings.scripts.path / f"{remote_script.name}"
         )
         return local_script
 

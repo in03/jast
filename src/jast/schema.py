@@ -166,7 +166,7 @@ class LocalJamfScript(JamfScript):
     @property
     def script_file(self):
         """Path to the script file, e.g. `my_script.sh`"""
-        return self.scriptPath / f"{self.name}.sh"
+        return self.scriptPath / self.name
 
     @property
     def metadata_file(self):
