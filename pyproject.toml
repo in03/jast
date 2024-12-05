@@ -20,13 +20,14 @@ classifiers = [
   "Programming Language :: Python :: Implementation :: PyPy",
 ]
 dependencies = [
-  "requests",
-  "tomlkit",
-  "rich",
-  "typer",
-  "pydantic",
-  "pydantic-settings",
-  "pyyaml",
+    "requests",
+    "tomlkit",
+    "rich",
+    "typer",
+    "pydantic",
+    "pydantic-settings",
+    "pyyaml",
+    "httpx>=0.28.0",
 ]
 
 [project.urls]

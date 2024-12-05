@@ -6,7 +6,7 @@ It includes functionality for authentication, managing categories, and handling 
 
 from typing import Any, Dict, List
 
-import requests
+import httpx
 from rich import print
 
 from jast.config import settings
@@ -14,7 +14,7 @@ from jast.schema import JamfCategory, LocalJamfScript, RemoteJamfScript
 
 # Warn ONCE if SSL verification is disabled
 if not settings.ssl.verify:
-    requests.packages.urllib3.disable_warnings()
+    httpx.disable_warnings()
     if settings.ssl.warn:
         print("[red]WARNING: SSL verification is disabled.")
 
@@ -41,27 +41,37 @@ class JamfClient:
 
     def _get_token(self, user: str, password: str) -> str:
         """
-        Obtain an authentication token from the Jamf Pro server.
-
-        Args:
-            user (str): The username for authentication.
-            password (str): The password for authentication.
-
-        Returns:
-            str: The authentication token.
-
-        Raises:
-            requests.exceptions.HTTPError: If the authentication request fails.
+        Obtain an authentication token from the Jamf Pro server using the new API endpoint.
         """
-        auth = requests.auth.HTTPBasicAuth(user, password)
-        response = requests.post(
-            f"{self.url}/uapi/auth/tokens", auth=auth, verify=settings.ssl.verify
+        auth = (user, password)
+        response = httpx.post(
+            f"{self.url}/api/v1/auth/token",
+            auth=auth,
+            verify=settings.ssl.verify
         )
         response.raise_for_status()
-
-        # #! DEBUG: REMOVE LATER
-        # print(response.json()["token"])
         return response.json()["token"]
+
+    def _make_request(self, method: str, endpoint: str, **kwargs):
+        """
+        Helper method to make API requests with proper headers.
+        """
+        headers = {
+            "Authorization": f"Bearer {self.token}",
+            "Accept": "application/json",
+        }
+        if method.lower() in ['post', 'put']:
+            headers["Content-Type"] = "application/json"
+        
+        response = httpx.request(
+            method,
+            f"{self.url}{endpoint}",
+            headers=headers,
+            verify=settings.ssl.verify,
+            **kwargs
+        )
+        response.raise_for_status()
+        return response
 
     def get_all_categories(self) -> List[JamfCategory]:
         """
@@ -71,15 +81,9 @@ class JamfClient:
             List[JamfCategory]: A list of all categories.
 
         Raises:
-            requests.exceptions.HTTPError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
         """
-        response = requests.get(
-            f"{self.url}/uapi/v1/categories",
-            headers={"Authorization": f"Bearer {self.token}"},
-            verify=settings.ssl.verify,
-        )
-        response.raise_for_status()
-
+        response = self._make_request("GET", "/api/v1/categories")
         categories = response.json()["results"]
         return [JamfCategory(**category) for category in categories]
 
@@ -94,7 +98,7 @@ class JamfClient:
             int: The ID of the category if found, -1 for "NONE" category.
 
         Raises:
-            requests.exceptions.HTTPError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
             ValueError: If multiple matching categories are found or if no matching category is found.
         """
 
@@ -129,14 +133,9 @@ class JamfClient:
             List[RemoteJamfScript]: A list of all scripts.
 
         Raises:
-            requests.exceptions.HTTPError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
         """
-        response = requests.get(
-            f"{self.url}/uapi/v1/scripts",
-            headers={"Authorization": f"Bearer {self.token}"},
-            verify=settings.ssl.verify,
-        )
-        response.raise_for_status()
+        response = self._make_request("GET", "/api/v1/scripts")
         return [RemoteJamfScript(**script) for script in response.json()["results"]]
 
     def get_script_by_id(self, script_id: int) -> RemoteJamfScript:
@@ -150,14 +149,9 @@ class JamfClient:
             RemoteJamfScript: The retrieved script.
 
         Raises:
-            requests.exceptions.HTTPError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
         """
-        response = requests.get(
-            f"{self.url}/uapi/v1/scripts/{script_id}",
-            headers={"Authorization": f"Bearer {self.token}"},
-            verify=settings.ssl.verify,
-        )
-        response.raise_for_status()
+        response = self._make_request("GET", f"/api/v1/scripts/{script_id}")
         return RemoteJamfScript(**response.json())
 
     def create_or_update_script(
@@ -175,7 +169,7 @@ class JamfClient:
             RemoteJamfScript: The newly registered or updated script.
 
         Raises:
-            requests.exceptions.HTTPError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
         """
 
         # Payload: Add metadata
@@ -186,7 +180,7 @@ class JamfClient:
         id = local_script.id if local_script.id else ""
 
         request = dict(
-            url=f"{self.url}/uapi/v1/scripts/{id}",
+            url=f"{self.url}/api/v1/scripts/{id}",
             headers={
                 "Authorization": f"Bearer {self.token}",
                 "Accept": "application/json",
@@ -197,20 +191,20 @@ class JamfClient:
         )
 
         if not id:
-            response = requests.post(**request)
+            response = httpx.post(**request)
         else:
-            response = requests.put(**request)
+            response = httpx.put(**request)
 
         try:
             response.raise_for_status()
-        except requests.exceptions.HTTPError as e:
+        except httpx.HTTPStatusError as e:
             error_message = f"HTTP error occurred: {e}"
             try:
                 error_details = response.json()
                 error_message += f"\nResponse details: {error_details}"
             except ValueError:
                 error_message += f"\nResponse text: {response.text}"
-            raise requests.exceptions.HTTPError(error_message) from e
+            raise httpx.HTTPStatusError(error_message) from e
 
         # Fetch the newly registered or updated script
         script_id = response.json().get("id")
@@ -227,16 +221,16 @@ class JamfClient:
             Dict[str, Any]: The response from the Jamf Pro server.
 
         Raises:
-            requests.exceptions.HTTPError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
         """
 
-        response = requests.delete(
-            f"{self.url}/uapi/v1/scripts/{script_id}",
+        response = httpx.delete(
+            f"{self.url}/api/v1/scripts/{script_id}",
             headers={"Authorization": f"Bearer {self.token}"},
             verify=settings.ssl.verify,
         )
         response.raise_for_status()
-        return response
+        return response.json()
 
     def rename_script(self, script_id: int, new_name: str) -> Dict[str, Any]:
         """
@@ -250,10 +244,10 @@ class JamfClient:
             Dict[str, Any]: The response from the Jamf Pro server containing the updated script information.
 
         Raises:
-            requests.exceptions.HTTPError: If the API request fails.
+            httpx.HTTPStatusError: If the API request fails.
         """
-        response = requests.put(
-            f"{self.url}/uapi/v1/scripts/{script_id}",
+        response = httpx.put(
+            f"{self.url}/api/v1/scripts/{script_id}",
             headers={"Authorization": f"Bearer {self.token}"},
             json={"name": new_name},
             verify=settings.ssl.verify,
